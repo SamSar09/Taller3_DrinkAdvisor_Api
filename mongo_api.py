@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pymongo import MongoClient
 from datetime import datetime
@@ -35,6 +35,16 @@ def get_comentarios(bar_id: int):
 def post_comentario(bar_id: int, datos: dict):
     datos['bar_id'] = bar_id
     datos['fecha']  = datetime.now().isoformat()
+
+    # Mejora (b): calificacion es opcional; si viene, debe ser un entero de 1 a 5
+    if 'calificacion' in datos:
+        try:
+            datos['calificacion'] = int(datos['calificacion'])
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="calificacion debe ser un entero")
+        if not 1 <= datos['calificacion'] <= 5:
+            raise HTTPException(status_code=400, detail="calificacion debe estar entre 1 y 5")
+
     db['comentarios_bares'].insert_one(datos)
     return {'mensaje': 'Comentario guardado'}
 
@@ -45,6 +55,11 @@ def get_eventos(bar_id: int):
 
 @app.post('/bares/{bar_id}/eventos')
 def post_evento(bar_id: int, datos: dict):
+    # Mejora (c): el nombre es obligatorio y no se guardan campos vacios
+    if not str(datos.get('nombre', '')).strip():
+        raise HTTPException(status_code=400, detail="El evento debe tener nombre")
+    datos = {k: v for k, v in datos.items() if v not in (None, "")}
+
     datos['bar_id'] = bar_id
     datos['fecha_creacion'] = datetime.now().isoformat()
     db['eventos'].insert_one(datos)
