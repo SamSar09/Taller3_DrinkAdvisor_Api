@@ -13,12 +13,8 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
-#os.environ para despliegue. Descomente cuando ya probó todo local.
 client = MongoClient(os.environ["MONGO_URI"])
-# TODO: conectarse al cluster Admonsis
-# client = MongoClient("mongodb://<usuario>:<contraseña>@157.253.236.88:8087")
 
-# TODO: conectarse a la base de datos Admonsis
 db = client["ISIS2304A24202620"]
 
 
@@ -28,7 +24,6 @@ def inicio():
 
 @app.get('/bares/{bar_id}/comentarios')
 def get_comentarios(bar_id: int):
-    # Mejora (a): del más reciente al más antiguo
     comentarios = list(db['comentarios_bares'].find({'bar_id': bar_id}, {'_id': 0}).sort('fecha', -1))
     return comentarios
 
@@ -37,7 +32,6 @@ def post_comentario(bar_id: int, datos: dict):
     datos['bar_id'] = bar_id
     datos['fecha']  = datetime.now().isoformat()
 
-    # Mejora (b): calificacion es opcional; si viene, debe ser un entero de 1 a 5
     if 'calificacion' in datos:
         try:
             datos['calificacion'] = int(datos['calificacion'])
@@ -51,13 +45,11 @@ def post_comentario(bar_id: int, datos: dict):
 
 @app.get('/bares/{bar_id}/eventos')
 def get_eventos(bar_id: int):
-    # Mejora (a): del más reciente al más antiguo
     eventos = list(db['eventos'].find({'bar_id': bar_id}, {'_id': 0}).sort('fecha_creacion', -1))
     return eventos
 
 @app.post('/bares/{bar_id}/eventos')
 def post_evento(bar_id: int, datos: dict):
-    # Mejora (c): el nombre es obligatorio y no se guardan campos vacios
     if not str(datos.get('nombre', '')).strip():
         raise HTTPException(status_code=400, detail="El evento debe tener nombre")
     datos = {k: v for k, v in datos.items() if v not in (None, "")}
